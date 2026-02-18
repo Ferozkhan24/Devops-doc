@@ -1,15 +1,41 @@
 #!/bin/sh
 
-LOG_FILE="/logs/system_errors.log"
-API_URL="http://192.168.0.100:4500/log"
+LOG_FILE="/app/logs/system_errors.log"
+API_URL="http://192.168.1.16:4500/log"
 CPU_THRESHOLD=90
 MEM_THRESHOLD=90
-NAME=$(hostname)
+# Container ID is the hostname
+CONTAINER_ID=$(hostname)
+# Container Name is passed via environment variable
+CONTAINER_NAME=${CONTAINER_NAME:-"unknown"}
+NAME="$CONTAINER_ID | $CONTAINER_NAME"
 
-# Create log file if it doesn't exist
-touch "$LOG_FILE"
+# Function to send log to API with error handling
+send_to_api() {
+    local plain_msg="$1"
+    local json_packet="{\"message\":\"$plain_msg\"}"
+    
+    # Added --max-time 2 to prevent shutdown hang if API is unreachable
+    if curl -s --max-time 2 -X POST "$API_URL" -H "Content-Type: application/json" -d "$json_packet" > /dev/null; then
+        echo "$plain_msg" >> "$LOG_FILE"
+    else
+        echo "$plain_msg | API ERROR" >> "$LOG_FILE"
+    fi
+}
 
 ALERT_SENT=0
+ENTRY_TS=$(date '+%Y-%m-%d %H:%M:%S')
+MSG="$ENTRY_TS | $NAME | INFO | Container Started"
+send_to_api "$MSG"
+
+cleanup() {
+    EXIT_TS=$(date '+%Y-%m-%d %H:%M:%S')
+    MSG="$EXIT_TS | $NAME | INFO | Container Stopped"
+    send_to_api "$MSG"
+    exit 0
+}
+
+trap cleanup INT TERM
 
 while true; do
     TS=$(date '+%Y-%m-%d %H:%M:%S')
@@ -19,9 +45,8 @@ while true; do
     CPU_STAT=$(grep '^cpu ' /proc/stat)
     if [ -z "$CPU_STAT" ]; then
         MSG="$TS | $NAME | ERROR | Failed to read /proc/stat"
-        echo "$MSG" | tee -a "$LOG_FILE"
-        curl -X POST "$API_URL" -H "Content-Type: application/json" -d "{\"message\":\"$MSG\"}"
-        sleep 10
+        send_to_api "$MSG"
+        sleep 10 & wait $!
         continue
     fi
 
@@ -29,7 +54,7 @@ while true; do
     IDLE1=$5
     TOTAL1=$(( $2+$3+$4+$5+$6+$7+$8 ))
 
-    sleep 1
+    sleep 1 & wait $!
 
     CPU_STAT=$(grep '^cpu ' /proc/stat)
     set -- $CPU_STAT
@@ -65,10 +90,7 @@ while true; do
     if [ "$CPU" -ge "$CPU_THRESHOLD" ] || [ "$MEM" -ge "$MEM_THRESHOLD" ]; then
         if [ "$ALERT_SENT" -eq 0 ]; then
             MSG="$TS | $NAME | ERROR | cpu=${CPU}% | mem=${MEM}%"
-            echo "$MSG" | tee -a "$LOG_FILE"
-            curl -s -X POST "$API_URL" \
-                 -H "Content-Type: application/json" \
-                 -d "{\"message\":\"$MSG\"}" > /dev/null &
+            send_to_api "$MSG"
             ALERT_SENT=1
         fi
     else
@@ -76,6 +98,6 @@ while true; do
         ALERT_SENT=0
     fi
 
-    sleep 10
+    sleep 10 & wait $!
 done
  

@@ -3,11 +3,13 @@ services:
     container_name: log-monitor
     build: .
     environment:
+      - CONTAINER_NAME=log-monitor
       - DISPLAY=${DISPLAY}
       - ROS_DOMAIN_ID=0
       - TZ=Asia/Kolkata
     volumes:
-      - ./logs:/logs
+      - ./logs:/app/logs
+      - ./system_error_check.sh:/app/system_error_check.sh
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /etc/localtime:/etc/localtime:ro
     deploy:
