@@ -5,7 +5,7 @@
 # Sends a "Jetson Started" log to the API on every boot.
 # ==============================================================
 
-LOG_FILE="/home/feroz/log-monitor/jetson-logger/logs/jetson_lifecycle.log"
+LOG_FILE="/home/feroz/log-monitor/jetson-logger/logs/jetson.log"
 API_URL="http://192.168.1.16:4500/log"
 HOSTNAME=$(hostname)
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
