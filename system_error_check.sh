@@ -46,7 +46,7 @@ while true; do
     if [ -z "$CPU_STAT" ]; then
         MSG="$TS | $NAME | ERROR | Failed to read /proc/stat"
         send_to_api "$MSG"
-        sleep 10 & wait $!
+        sleep 2 & wait $!
         continue
     fi
 
@@ -98,6 +98,6 @@ while true; do
         ALERT_SENT=0
     fi
 
-    sleep 10 & wait $!
+    sleep 2 & wait $!
 done
  
