@@ -1,0 +1,19 @@
+services:
+  log-monitor:
+    container_name: log-monitor
+    build: .
+    environment:
+      - CONTAINER_NAME=log-monitor
+      - DISPLAY=${DISPLAY}
+      - ROS_DOMAIN_ID=0
+      - TZ=Asia/Kolkata
+    volumes:
+      - ./logs:/app/logs
+      - ./system_error_check.sh:/app/system_error_check.sh
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1024M # Increased memory limit for ROS
